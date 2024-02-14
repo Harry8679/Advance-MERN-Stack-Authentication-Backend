@@ -27,8 +27,7 @@ app.get('/', (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
-// process.env.MONGO_URI
-// console.log(process.env.MONGO_URI);
+
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         app.listen(PORT, () => {

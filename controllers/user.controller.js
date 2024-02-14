@@ -1,12 +1,13 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
+const { generateToken } = require('../utils/index.util');
 
 const register = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
 
     // Validation
-    if (!name || !email ||password) {
+    if (!name || !email || !password) {
         res.status(400);
         throw new Error('Please fill in all required fields');
     }
@@ -19,13 +20,34 @@ const register = asyncHandler(async (req, res) => {
     // Check if user exists
     const userExists = await User.findOne({ email });
 
-    if (!userExists) {
+    if (userExists) {
         res.status(400);
         throw new Error('Email already in use');
     }
 
     // Create new user
     const user = await User.create({ name, email, password });
+
+    // Generate token
+    const token =  generateToken(user._id);
+
+    // Send HTTP-Only cookie
+    res.cookie('token', token, {
+        path: '/',
+        httpOnly: true,
+        expires: new Date(Date.now() + 1000 * 24 * 60 * 60), // 1 day
+        sameSite: 'none',
+        secure: true
+    });
+
+    if (user) {
+        const { _id, name, email, phone, bio, photo, role, isVerified } = user;
+
+        res.status(201).json({ _id, name, email, phone, bio, photo, role, isVerified, token });
+    } else {
+        res.status(400);
+        throw new Error('Invalid User data');
+    }
 });
 
 module.exports = { register };
