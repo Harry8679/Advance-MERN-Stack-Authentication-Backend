@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
+const userRoute = require('./routes/user.route');
 
 const app = express();
 
@@ -13,6 +14,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(cors());
+
+// Routes
+app.use('/api/users', userRoute);
 
 app.get('/', (req, res) => {
     res.send('Home Page');
