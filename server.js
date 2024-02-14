@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const userRoute = require('./routes/user.route');
+const errorHandler = require('./middlewares/error.middleware');
 
 const app = express();
 
@@ -21,6 +22,9 @@ app.use('/api/users', userRoute);
 app.get('/', (req, res) => {
     res.send('Home Page');
 });
+
+// Error Handler
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
 // process.env.MONGO_URI
