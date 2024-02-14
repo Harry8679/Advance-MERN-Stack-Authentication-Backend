@@ -56,7 +56,50 @@ const register = asyncHandler(async (req, res) => {
 });
 
 const login = asyncHandler(async(req, res) => {
-    res.send('Login User');
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+        res.status(400);
+        throw new Error('Please add email and password');
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found, please signup');
+    }
+
+    const passwordIsCorrect = await bcrypt.compare(password, user.password);
+
+    if (!passwordIsCorrect) {
+        res.status(400);
+        throw new Error('Invalid email or password');
+    }
+
+    // Trigger 2FA for unknpw UserAgent
+
+    // Generate token
+    const token = generateToken(user._id);
+
+    if (user && passwordIsCorrect) {
+        // Send HTTP-Only cookie
+        res.cookie('token', token, {
+            path: '/',
+            httpOnly: true,
+            expires: new Date(Date.now() + 1000 * 24 * 60 * 60), // 1 day
+            sameSite: 'none',
+            secure: true
+        });
+
+        const { _id, name, email, phone, bio, photo, role, isVerified } = user;
+
+        res.status(200).json({ _id, name, email, phone, bio, photo, role, isVerified, token });
+    } else {
+        res.status(500);
+        throw new Error('Something went wrong, please try again');
+    }
 });
 
 module.exports = { register, login };
