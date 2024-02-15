@@ -128,4 +128,9 @@ const getUser = asyncHandler(async(req, res) => {
     }
 });
 
-module.exports = { register, login, logout, getUser };
+// Update user
+const update = asyncHandler(async(req, res) => {
+    res.send('Update');
+});
+
+module.exports = { register, login, logout, getUser, update };
