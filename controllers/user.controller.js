@@ -205,4 +205,23 @@ const loginStatus = asyncHandler(async (req, res) => {
     return res.json(false);
 });
 
-module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus };
+// Change Role of User
+const upgradeUser = asyncHandler(async(req, res) => {
+    const { id, role } = req.body;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+        res.status(500);
+        throw new Error('User not found');
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.status(200).json({
+        message: `User role updated successfully to ${role}`
+    });
+});
+
+module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser };
