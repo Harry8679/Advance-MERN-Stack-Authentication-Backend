@@ -176,4 +176,16 @@ const deleteUser = asyncHandler(async(req, res) => {
     });
 });
 
-module.exports = { register, login, logout, getUser, update, deleteUser };
+// Get All Users
+const getAllUsers = asyncHandler(async(req, res) => {
+    const users = await User.find().sort('-createdAt').select('-password');
+
+    if (!users) {
+        res.status(500);
+        throw new Error('Something went wrong');
+    }
+
+    res.status(200).json(users);
+});
+
+module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers };
