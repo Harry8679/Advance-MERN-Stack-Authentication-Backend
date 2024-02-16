@@ -3,6 +3,7 @@ const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils/index.util');
 let parser = require('ua-parser-js');
+const jwt = require('jsonwebtoken');
 
 const register = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
@@ -188,4 +189,20 @@ const getAllUsers = asyncHandler(async(req, res) => {
     res.status(200).json(users);
 });
 
-module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers };
+// Get Login Status
+const loginStatus = asyncHandler(async (req, res) => {
+    const token = req.cookies.token;
+    if (!token) {
+        res.json(false);
+    }
+
+    // Verify token
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (verified) {
+        return res.json(true);
+    }
+    return res.json(false);
+});
+
+module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus };
