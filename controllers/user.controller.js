@@ -5,6 +5,8 @@ const { generateToken } = require('../utils/index.util');
 const sendEmail = require('../utils/sendEmail.util');
 let parser = require('ua-parser-js');
 const jwt = require('jsonwebtoken');
+const Token = require('../models/token.model');
+const crypto = require('crypto');
 
 const register = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
@@ -57,6 +59,36 @@ const register = asyncHandler(async (req, res) => {
     }
 });
 
+
+// ----------- Verification Email --------------------
+const sendVerificationEmail = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found.'); 
+    }
+
+    if (user.isVerified) {
+        res.status(400);
+        throw new Error('User already verified');
+    }
+
+    // Delete Token if exists in DB
+    let token = await Token.findOne({ userId: user._id });
+
+    if (token) {
+        await Token.deleteOne();
+    }
+
+    // Create verification Token And Save
+    const verificationToken = crypto.randomBytes(32).toString('hex') + user._id;
+    console.log(verificationToken);
+    res.send('Token');
+});
+
+
+// ----------- Login --------------------
 const login = asyncHandler(async(req, res) => {
     const { email, password } = req.body;
 
@@ -104,6 +136,8 @@ const login = asyncHandler(async(req, res) => {
     }
 });
 
+
+// ----------- Logout --------------------
 const logout = asyncHandler(async(req, res) => {
     res.cookie('token', '', {
         path: '/',
@@ -116,6 +150,8 @@ const logout = asyncHandler(async(req, res) => {
     return res.status(200).json({ message: 'Logout Successful' })
 });
 
+
+// ----------- Get User Infos --------------------
 const getUser = asyncHandler(async(req, res) => {
     const user = await User.findById(req.user._id);
 
@@ -130,7 +166,8 @@ const getUser = asyncHandler(async(req, res) => {
     }
 });
 
-// Update user
+
+// ----------- Update User --------------------
 const update = asyncHandler(async(req, res) => {
     const user = await User.findById(req.user._id);
 
@@ -161,7 +198,8 @@ const update = asyncHandler(async(req, res) => {
     }
 });
 
-// Delete User
+
+// ----------- Delete User --------------------
 const deleteUser = asyncHandler(async(req, res) => {
     // res.send('Delete User');
     const user = User.findById(req.params.id);
@@ -178,7 +216,8 @@ const deleteUser = asyncHandler(async(req, res) => {
     });
 });
 
-// Get All Users
+
+// ----------- Get All Users --------------------
 const getAllUsers = asyncHandler(async(req, res) => {
     const users = await User.find().sort('-createdAt').select('-password');
 
@@ -190,7 +229,8 @@ const getAllUsers = asyncHandler(async(req, res) => {
     res.status(200).json(users);
 });
 
-// Get Login Status
+
+// ----------- Get Login Status --------------------
 const loginStatus = asyncHandler(async (req, res) => {
     const token = req.cookies.token;
     if (!token) {
@@ -206,7 +246,8 @@ const loginStatus = asyncHandler(async (req, res) => {
     return res.json(false);
 });
 
-// Change Role of User
+
+// ----------- Change Role of User --------------------
 const upgradeUser = asyncHandler(async(req, res) => {
     const { id, role } = req.body;
 
@@ -225,6 +266,8 @@ const upgradeUser = asyncHandler(async(req, res) => {
     });
 });
 
+
+// ----------- Send Automated Email --------------------
 const sendAutomatedEmail = asyncHandler(async(req, res) => {
     const { subject, send_to, reply_to, template, url } = req.body;
 
@@ -254,4 +297,4 @@ const sendAutomatedEmail = asyncHandler(async(req, res) => {
     }
 });
 
-module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail };
+module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail };
