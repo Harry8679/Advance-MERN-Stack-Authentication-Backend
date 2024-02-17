@@ -29,12 +29,8 @@ const sendMail = async(subject, send_to, sent_from, reply_to, template, name, li
     transporter.use('compile', hbs(handlearOptions));
 
     // Options for sending email
-    const options = {
-        from: sent_from,
-        to: send_to,
-        reply_to: reply_to,
-        subject,
-        template,
+    const options = { 
+        from: sent_from, to: send_to, reply_to: reply_to, subject, template,
         context: { name, link }
     }
 

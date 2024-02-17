@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils/index.util');
+const sendEmail = require('../utils/sendEmail.util');
 let parser = require('ua-parser-js');
 const jwt = require('jsonwebtoken');
 
@@ -224,4 +225,33 @@ const upgradeUser = asyncHandler(async(req, res) => {
     });
 });
 
-module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser };
+const sendAutomatedEmail = asyncHandler(async(req, res) => {
+    const { subject, send_to, reply_to, template, url } = req.body;
+
+    if (!subject || !send_to || !reply_to || !template) {
+        res.status(500);
+        throw new Error('Missing email parameters');
+    }
+
+    // Get user
+    const user = await User.findOne({ email: send_to });
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+
+    const sent_from = process.env.EMAIL_USER;
+    const name = user.name;
+    const link = `${process.env.FRONTEND_URL}${url}`;
+
+    try {
+        await sendEmail(subject, send_to, sent_from, reply_to, template, name, link);
+        res.status(200).json({ message: 'Email sent !' });
+    } catch(error) {
+        res.status(500);
+        throw new Error('L\'Email n\'a pas été envoyé, veuillez réessayer');
+    }
+});
+
+module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail };
