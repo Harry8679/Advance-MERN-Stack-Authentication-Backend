@@ -113,7 +113,7 @@ const sendVerificationEmail = asyncHandler(async (req, res) => {
         res.status(200).json({ message: 'Email sent !' });
     } catch(error) {
         res.status(500);
-        throw new Error('L\'Email n\'a pas été envoyé, veuillez réessayer');
+        throw new Error('Email  was not sent, try again.');
     }
 });
 
@@ -323,7 +323,7 @@ const sendAutomatedEmail = asyncHandler(async(req, res) => {
         res.status(200).json({ message: 'Email sent !' });
     } catch(error) {
         res.status(500);
-        throw new Error('L\'Email n\'a pas été envoyé, veuillez réessayer');
+        throw new Error('Email  was not sent, try again.');
     }
 });
 
