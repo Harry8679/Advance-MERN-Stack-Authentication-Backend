@@ -1,7 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
-const { generateToken } = require('../utils/index.util');
+const { generateToken, hashToken } = require('../utils/index.util');
 const sendEmail = require('../utils/sendEmail.util');
 let parser = require('ua-parser-js');
 const jwt = require('jsonwebtoken');
@@ -84,7 +84,37 @@ const sendVerificationEmail = asyncHandler(async (req, res) => {
     // Create verification Token And Save
     const verificationToken = crypto.randomBytes(32).toString('hex') + user._id;
     console.log(verificationToken);
-    res.send('Token');
+
+    // Hash Token and save
+    const hashedToken = hashToken(verificationToken);
+    await new Token({
+        userId: user._id,
+        vToken: hashedToken,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 60 * (60 * 1000), // 60 minutes
+    }).save();
+
+    // Construction Verification URL
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify/${verificationToken}`;
+
+    // Send Email
+    const subject = 'Verify Your Account - EMARH';
+    const send_to = user.email;
+    const sent_from = process.env.EMAIL_USER;
+    const reply_to = 'noreply@lhlp.fr';
+    const template = 'verifyEmail';
+    const name = user.name;
+    const link = verificationUrl;
+    // console.log(verificationToken);
+    // res.send('Token');
+
+    try {
+        await sendEmail(subject, send_to, sent_from, reply_to, template, name, link);
+        res.status(200).json({ message: 'Email sent !' });
+    } catch(error) {
+        res.status(500);
+        throw new Error('L\'Email n\'a pas été envoyé, veuillez réessayer');
+    }
 });
 
 
