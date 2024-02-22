@@ -110,7 +110,7 @@ const sendVerificationEmail = asyncHandler(async (req, res) => {
 
     try {
         await sendEmail(subject, send_to, sent_from, reply_to, template, name, link);
-        res.status(200).json({ message: 'Email sent !' });
+        res.status(200).json({ message: 'Verification Email sent !' });
     } catch(error) {
         res.status(500);
         throw new Error('Email  was not sent, try again.');
@@ -327,4 +327,10 @@ const sendAutomatedEmail = asyncHandler(async(req, res) => {
     }
 });
 
-module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail };
+
+// ----------- Verify User --------------------
+const verifyUser = asyncHandler(async (req, res) => {
+
+});
+
+module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser };
