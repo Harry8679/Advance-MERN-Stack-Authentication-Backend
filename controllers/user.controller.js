@@ -231,7 +231,6 @@ const update = asyncHandler(async(req, res) => {
 
 // ----------- Delete User --------------------
 const deleteUser = asyncHandler(async(req, res) => {
-    // res.send('Delete User');
     const user = User.findById(req.params.id);
 
     if (!user) {
@@ -330,9 +329,7 @@ const sendAutomatedEmail = asyncHandler(async(req, res) => {
 
 // ----------- Verify User --------------------
 const verifyUser = asyncHandler(async (req, res) => {
-    // console.log(req.params);
     const { verificationToken } = req.params;
-    // console.log(verificationToken, typeof(verificationToken));
 
     const hashedToken = hashToken(verificationToken);
 
@@ -364,7 +361,56 @@ const verifyUser = asyncHandler(async (req, res) => {
 });
 
 const forgotPassword = asyncHandler(async(req, res) => {
-    res.send('Forgot Password');
+    const { email }  = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        res.status(404);
+        throw new Error('No user with this email');
+    }
+
+    // Delete Token if exists in DB
+    let token = await Token.findOne({ userId: user._id });
+
+    if (token) {
+        await Token.deleteOne();
+    }
+
+    // Create verification Token And Save
+    const resetToken = crypto.randomBytes(32).toString('hex') + user._id;
+    console.log(resetToken);
+
+    // Hash Token and save
+    const hashedToken = hashToken(resetToken);
+    await new Token({
+        userId: user._id,
+        vToken: hashedToken,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 60 * (60 * 1000), // 60 minutes
+    }).save();
+
+    // Construction Reset URL
+    const resetUrl = `${process.env.FRONTEND_URL}/verify/${resetToken}`;
+
+    // Send Email
+    const subject = 'Password Reset Request - EMARH';
+    const send_to = user.email;
+    const sent_from = process.env.EMAIL_USER;
+    const reply_to = 'noreply@lhlp.fr';
+    const template = 'forgotPassword';
+    const name = user.name;
+    const link = resetUrl;
+    // console.log(verificationToken);
+    // res.send('Token');
+
+    try {
+        await sendEmail(subject, send_to, sent_from, reply_to, template, name, link);
+        res.status(200).json({ message: 'Password Reset Email sent !' });
+    } catch(error) {
+        res.status(500);
+        throw new Error('Email  was not sent, try again.');
+    }
 });
 
 module.exports = { 
