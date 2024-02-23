@@ -363,4 +363,10 @@ const verifyUser = asyncHandler(async (req, res) => {
     });
 });
 
-module.exports = { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser };
+const forgotPassword = asyncHandler(async(req, res) => {
+    res.send('Forgot Password');
+});
+
+module.exports = { 
+    register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser, forgotPassword
+};
