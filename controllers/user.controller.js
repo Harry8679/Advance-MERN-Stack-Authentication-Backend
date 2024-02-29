@@ -83,7 +83,7 @@ const sendVerificationEmail = asyncHandler(async (req, res) => {
 
     // Create verification Token And Save
     const verificationToken = crypto.randomBytes(32).toString('hex') + user._id;
-    console.log(verificationToken);
+    console.log('Verification Token', verificationToken);
 
     // Hash Token and save
     const hashedToken = hashToken(verificationToken);
@@ -105,8 +105,6 @@ const sendVerificationEmail = asyncHandler(async (req, res) => {
     const template = 'verifyEmail';
     const name = user.name;
     const link = verificationUrl;
-    // console.log(verificationToken);
-    // res.send('Token');
 
     try {
         await sendEmail(subject, send_to, sent_from, reply_to, template, name, link);
@@ -379,7 +377,7 @@ const forgotPassword = asyncHandler(async(req, res) => {
 
     // Create verification Token And Save
     const resetToken = crypto.randomBytes(32).toString('hex') + user._id;
-    console.log(resetToken);
+    console.log('Reset Token forgot password', resetToken);
 
     // Hash Token and save
     const hashedToken = hashToken(resetToken);
@@ -401,8 +399,6 @@ const forgotPassword = asyncHandler(async(req, res) => {
     const template = 'forgotPassword';
     const name = user.name;
     const link = resetUrl;
-    // console.log(verificationToken);
-    // res.send('Token');
 
     try {
         await sendEmail(subject, send_to, sent_from, reply_to, template, name, link);
@@ -413,6 +409,34 @@ const forgotPassword = asyncHandler(async(req, res) => {
     }
 });
 
+const resetPassword = asyncHandler(async (req, res) => {
+    const { resetToken } = req.params;
+    const { password } = req.body;
+    console.log('restet token', resetToken);
+    console.log('password', password);
+  
+    const hashedToken = hashToken(resetToken);
+  
+    const userToken = await Token.findOne({
+      rToken: hashedToken,
+      expiresAt: { $gt: Date.now() },
+    });
+  
+    if (!userToken) {
+      res.status(404);
+      throw new Error("Invalid or Expired Token");
+    }
+  
+    // Find User
+    const user = await User.findOne({ _id: userToken.userId });
+  
+    // Now Reset password
+    user.password = password;
+    await user.save();
+  
+    res.status(200).json({ message: "Password Reset Successful, please login" });
+  });
+
 module.exports = { 
-    register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser, forgotPassword
+    register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser, forgotPassword, resetPassword
 };
