@@ -359,43 +359,44 @@ const verifyUser = asyncHandler(async (req, res) => {
 });
 
 const forgotPassword = asyncHandler(async(req, res) => {
-    const { email }  = req.body;
+
+    const { email } = req.body;
 
     const user = await User.findOne({ email });
 
-    if (!user) {
+    if(!user) {
         res.status(404);
         throw new Error('No user with this email');
     }
 
-    // Delete Token if exists in DB
+    // Delete Token if it exists in DB
     let token = await Token.findOne({ userId: user._id });
 
     if (token) {
-        await Token.deleteOne();
+        await token.deleteOne();
     }
 
-    // Create verification Token And Save
+    // Create Verification Token and Save
     const resetToken = crypto.randomBytes(32).toString('hex') + user._id;
-    console.log('Reset Token forgot password', resetToken);
+    console.log('resetToken', resetToken);
 
-    // Hash Token and save
+    // Hash token and save
     const hashedToken = hashToken(resetToken);
     await new Token({
         userId: user._id,
-        vToken: hashedToken,
+        rToken: hashedToken,
         createdAt: Date.now(),
-        expiresAt: Date.now() + 60 * (60 * 1000), // 60 minutes
+        expiresAt: Date.now() + 60 * (60 * 1000) // 1h
     }).save();
 
-    // Construction Reset URL
-    const resetUrl = `${process.env.FRONTEND_URL}/verify/${resetToken}`;
+    // Construct Reset URL
+    const resetUrl = `${process.env.FRONTEND_URL}/resetPassword/${resetToken}`;
 
     // Send Email
     const subject = 'Password Reset Request - EMARH';
     const send_to = user.email;
     const sent_from = process.env.EMAIL_USER;
-    const reply_to = 'noreply@lhlp.fr';
+    const reply_to = 'noreply@emarh-auth.fr';
     const template = 'forgotPassword';
     const name = user.name;
     const link = resetUrl;
@@ -407,36 +408,35 @@ const forgotPassword = asyncHandler(async(req, res) => {
         res.status(500);
         throw new Error('Email  was not sent, try again.');
     }
+
 });
 
-const resetPassword = asyncHandler(async (req, res) => {
-    const { resetToken } = req.params;
-    const { password } = req.body;
-    console.log('restet token', resetToken);
-    console.log('password', password);
-  
-    const hashedToken = hashToken(resetToken);
-  
-    const userToken = await Token.findOne({
-      rToken: hashedToken,
-      expiresAt: { $gt: Date.now() },
-    });
-  
-    if (!userToken) {
-      res.status(404);
-      throw new Error("Invalid or Expired Token");
-    }
-  
-    // Find User
-    const user = await User.findOne({ _id: userToken.userId });
-  
-    // Now Reset password
-    user.password = password;
-    await user.save();
-  
-    res.status(200).json({ message: "Password Reset Successful, please login" });
-  });
+    const resetPassword = asyncHandler(async(req, res) => {
+        // res.send('Reset Password');
+        const { resetToken } = req.params;
+        const { password } = req.body;
 
+        const hashedToken = hashToken(resetToken);
+
+        const userToken = await Token.findOne({
+            rToken: hashedToken,
+            expiresAt: { $gt: Date.now() }
+        });
+
+        if (!userToken) {
+            res.status(404);
+            throw new Error("Invalid or Expired Token");
+        }
+
+        // Find User
+        const user = await User.findOne({ _id: userToken.userId });
+
+        // Now Reset Password
+        user.password = password;
+        await user.save();
+
+        res.status(200).json({ message: "Password Reset Successful, please login" });
+    });
 module.exports = { 
     register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser, forgotPassword, resetPassword
 };
