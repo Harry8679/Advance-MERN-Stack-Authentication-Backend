@@ -144,6 +144,8 @@ const login = asyncHandler(async(req, res) => {
     }
 
     // Trigger 2FA (Two Factors Authentication) for unknow UserAgent
+    // The User Agent (Insomnia, Postman, Chrome, Safari ...), 
+    // tant qu'il n'est pas stocké en base il va renvoyer un code pour pouvoir rajouter un nouvel agent en base
     const ua = parser(req.headers['user-agent']);
     const thisUserAgent = ua.ua;
     console.log('thisUserAgent', thisUserAgent);
@@ -502,7 +504,12 @@ const forgotPassword = asyncHandler(async(req, res) => {
             throw new Error('Votre ancien mot de passe est incorrect');
         }
     });
+
+    const sendLoginCode = asyncHandler(async(req, res) => {
+        res.send('Send login code');
+    });
+
 module.exports = { 
     register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser, forgotPassword, 
-    resetPassword, changePassword
+    resetPassword, changePassword, sendLoginCode
 };
