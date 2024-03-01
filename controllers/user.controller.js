@@ -11,6 +11,8 @@ const Cryptr = require('cryptr');
 
 const cryptr = new Cryptr(process.env.CRYPTR_KEY);
 
+
+// ----------- Register User --------------------
 const register = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
 
@@ -119,7 +121,7 @@ const sendVerificationEmail = asyncHandler(async (req, res) => {
 });
 
 
-// ----------- Login --------------------
+// ----------- Login User --------------------
 const login = asyncHandler(async(req, res) => {
     const { email, password } = req.body;
 
@@ -175,7 +177,7 @@ const login = asyncHandler(async(req, res) => {
         }).save();
 
         res.status(400);
-        throw new Error('Check your email for login code');
+        throw new Error('New Browser or device detected');
     }
 
     // Generate token
@@ -394,6 +396,8 @@ const verifyUser = asyncHandler(async (req, res) => {
     });
 });
 
+
+// ----------- Forgot Password --------------------
 const forgotPassword = asyncHandler(async(req, res) => {
 
     const { email } = req.body;
@@ -446,171 +450,164 @@ const forgotPassword = asyncHandler(async(req, res) => {
     }
 });
 
-    const resetPassword = asyncHandler(async(req, res) => {
-        // res.send('Reset Password');
-        const { resetToken } = req.params;
-        const { password } = req.body;
 
-        const hashedToken = hashToken(resetToken);
+// ----------- Reset Your Password --------------------
+const resetPassword = asyncHandler(async(req, res) => {
+    // res.send('Reset Password');
+    const { resetToken } = req.params;
+    const { password } = req.body;
 
-        const userToken = await Token.findOne({
-            rToken: hashedToken,
-            expiresAt: { $gt: Date.now() }
-        });
+    const hashedToken = hashToken(resetToken);
 
-        if (!userToken) {
-            res.status(404);
-            throw new Error("Invalid or Expired Token");
-        }
+    const userToken = await Token.findOne({
+        rToken: hashedToken,
+        expiresAt: { $gt: Date.now() }
+    });
 
-        // Find User
-        const user = await User.findOne({ _id: userToken.userId });
+    if (!userToken) {
+        res.status(404);
+        throw new Error("Invalid or Expired Token");
+    }
 
-        // Now Reset Password
+    // Find User
+    const user = await User.findOne({ _id: userToken.userId });
+
+    // Now Reset Password
+    user.password = password;
+    await user.save();
+
+    res.status(200).json({ message: "Password Reset Successful, please login" });
+});
+
+
+// ----------- Change Your Password --------------------
+const changePassword = asyncHandler(async(req, res) => {
+    const { oldPassword, password } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+
+    if (!oldPassword || !password) {
+        res.status(400);
+        throw new Error('Please enter old and new password.')
+    }
+
+    // Check if old password is correct
+    const passwordIsCorrect = await bcrypt.compare(oldPassword, user.password);
+
+    // Save new Password
+    if (user && passwordIsCorrect) {
         user.password = password;
         await user.save();
 
-        res.status(200).json({ message: "Password Reset Successful, please login" });
+        res.status(200).json({
+            message: 'Password change successful, please re-login !'
+        });
+    } else {
+        res.status(400);
+        throw new Error('Votre ancien mot de passe est incorrect');
+    }
+});
+
+
+// ----------- Send Login Code --------------------
+const sendLoginCode = asyncHandler(async (req, res) => {
+    const { email } = req.params;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        res.status(404);
+        throw new Error("User not found");
+    }
+
+    // Find Login Code in DB
+    let userToken = await Token.findOne({
+        userId: user._id,
+        expiresAt: { $gt: Date.now() },
     });
 
-    const changePassword = asyncHandler(async(req, res) => {
-        const { oldPassword, password } = req.body;
-        const user = await User.findById(req.user._id);
+    if (!userToken) {
+        res.status(404);
+        throw new Error("Invalid or Expired token, please login again");
+    }
 
-        if (!user) {
-            res.status(404);
-            throw new Error('User not found');
-        }
-
-        if (!oldPassword || !password) {
-            res.status(400);
-            throw new Error('Please enter old and new password.')
-        }
-
-        // Check if old password is correct
-        const passwordIsCorrect = await bcrypt.compare(oldPassword, user.password);
-
-        // Save new Password
-        if (user && passwordIsCorrect) {
-            user.password = password;
-            await user.save();
-
-            res.status(200).json({
-                message: 'Password change successful, please re-login !'
-            });
-        } else {
-            res.status(400);
-            throw new Error('Votre ancien mot de passe est incorrect');
-        }
-    });
+    const loginCode = userToken.lToken;
+    const decryptedLoginCode = cryptr.decrypt(loginCode);
 
     // Send Login Code
-    const sendLoginCode = asyncHandler(async (req, res) => {
-        const { email } = req.params;
-        const user = await User.findOne({ email });
+    const subject = "Login Access Code - EMARH";
+    const send_to = email;
+    const sent_from = process.env.EMAIL_USER;
+    const reply_to = 'noreply@emarh-auth.fr';
+    const template = "loginCode";
+    const name = user.name;
+    const link = decryptedLoginCode;
 
-        if (!user) {
-            res.status(404);
-            throw new Error("User not found");
-        }
+    try {
+        await sendEmail(subject, send_to, sent_from, reply_to, template, name, link);
+        res.status(200).json({ message: `Access code sent to ${email}` });
+    } catch (error) {
+        res.status(500);
+        throw new Error("Email not sent, please try again");
+    }
+});
 
-        // Find Login Code in DB
-        let userToken = await Token.findOne({
-            userId: user._id,
-            expiresAt: { $gt: Date.now() },
+
+// ----------- Login With Code --------------------
+const loginWithCode = asyncHandler(async(req, res) => {
+    const { email } = req.params;
+    const { loginCode } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+
+    // Find User Login Token
+    const userToken = await Token.findOne({
+        userId: user._id,
+        expiresAt: { $gt: Date.now() }
+    });
+
+    if (!userToken) {
+        res.status(404);
+        throw new Error('Invalid or Expired Token. Please login again');
+    }
+
+    const decryptedLoginCode = cryptr.decrypt(userToken.lToken);
+
+    if (loginCode !== decryptedLoginCode) {
+        res.status(400);
+        throw new Error("Incorrect login code, please try again");
+      } else {
+        // Register userAgent
+        const ua = parser(req.headers["user-agent"]);
+        const thisUserAgent = ua.ua;
+        user.userAgent.push(thisUserAgent);
+        await user.save();    
+
+        // Generate token
+        const token =  generateToken(user._id);
+
+        // Send HTTP-Only cookie
+        res.cookie('token', token, {
+            path: '/',
+            httpOnly: true,
+            expires: new Date(Date.now() + 1000 * 24 * 60 * 60), // 1 day
+            sameSite: 'none',
+            secure: true
         });
 
-        if (!userToken) {
-            res.status(404);
-            throw new Error("Invalid or Expired token, please login again");
-        }
+        const { _id, name, email, phone, bio, photo, role, isVerified } = user;
 
-        const loginCode = userToken.lToken;
-        const decryptedLoginCode = cryptr.decrypt(loginCode);
-
-        // Send Login Code
-        const subject = "Login Access Code - EMARH";
-        const send_to = email;
-        const sent_from = process.env.EMAIL_USER;
-        const reply_to = 'noreply@emarh-auth.fr';
-        const template = "loginCode";
-        const name = user.name;
-        const link = decryptedLoginCode;
-
-        try {
-            await sendEmail(
-            subject,
-            send_to,
-            sent_from,
-            reply_to,
-            template,
-            name,
-            link
-            );
-            res.status(200).json({ message: `Access code sent to ${email}` });
-        } catch (error) {
-            res.status(500);
-            throw new Error("Email not sent, please try again");
-        }
-    });
-
-    // Login With Code
-    const loginWithCode = asyncHandler(async(req, res) => {
-        res.send('Login With Code');
-    });
-
-    // // Login With Code
-    // const loginWithCode = asyncHandler(async (req, res) => {
-    //     const { email } = req.params;
-    //     const { loginCode } = req.body;
-    
-    //     const user = await User.findOne({ email });
-    
-    //     if (!user) {
-    //     res.status(404);
-    //     throw new Error("User not found");
-    //     }
-    
-    //     // Find user Login Token
-    //     const userToken = await Token.findOne({
-    //     userId: user.id,
-    //     expiresAt: { $gt: Date.now() },
-    //     });
-    
-    //     if (!userToken) {
-    //     res.status(404);
-    //     throw new Error("Invalid or Expired Token, please login again");
-    //     }
-    
-    //     const decryptedLoginCode = cryptr.decrypt(userToken.lToken);
-    
-    //     if (loginCode !== decryptedLoginCode) {
-    //     res.status(400);
-    //     throw new Error("Incorrect login code, please try again");
-    //     } else {
-    //     // Register userAgent
-    //     const ua = parser(req.headers["user-agent"]);
-    //     const thisUserAgent = ua.ua;
-    //     user.userAgent.push(thisUserAgent);
-    //     await user.save();
-    
-    //     // Generate Token
-    //     const token = generateToken(user._id);
-    
-    //     // Send HTTP-only cookie
-    //     res.cookie("token", token, {
-    //         path: "/",
-    //         httpOnly: true,
-    //         expires: new Date(Date.now() + 1000 * 86400), // 1 day
-    //         sameSite: "none",
-    //         secure: true,
-    //     });
-    
-    //     const { _id, name, email, phone, bio, photo, role, isVerified } = user;
-    
-    //     res.status(200).json({ _id, name, email, phone, bio, photo, role, isVerified, token });
-    //     }
-    // });
+        res.status(200).json({ _id, name, email, phone, bio, photo, role, isVerified, token });
+    }
+});
 
 module.exports = { 
     register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser, forgotPassword, 
