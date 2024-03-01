@@ -143,7 +143,38 @@ const login = asyncHandler(async(req, res) => {
         throw new Error('Invalid email or password');
     }
 
-    // Trigger 2FA for unknpw UserAgent
+    // Trigger 2FA (Two Factors Authentication) for unknow UserAgent
+    const ua = parser(req.headers['user-agent']);
+    const thisUserAgent = ua.ua;
+    console.log('thisUserAgent', thisUserAgent);
+    const allowedAgent = user.userAgent.includes(thisUserAgent);
+
+    if (!allowedAgent) {
+        // Generate 6 digit code
+        const loginCode = Math.floor(100000 + Math.random() * 900000);
+        console.log('loginCode: ' + loginCode);
+
+        // Encrypt login code before saving to DB
+        const encryptedLoginCode = cryptr.encrypt(loginCode.toString());
+
+        // Delete Token if it exists in DB
+        let userToken = await Token.findOne({ userId: user._id });
+
+        if (userToken) {
+            await userToken.deleteOne();
+        }
+
+        // Save Token To DB
+        await new Token({
+            userId: user._id,
+            lToken: encryptedLoginCode,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 60 * (60 * 1000) // 1h
+        }).save();
+
+        res.status(400);
+        throw new Error('Check your email for login code');
+    }
 
     // Generate token
     const token = generateToken(user._id);
