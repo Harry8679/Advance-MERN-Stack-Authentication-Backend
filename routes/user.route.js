@@ -2,7 +2,8 @@ const express = require('express');
 const { register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser, forgotPassword, 
     resetPassword, 
     changePassword,
-    sendLoginCode} = require('../controllers/user.controller');
+    sendLoginCode,
+    loginWithCode} = require('../controllers/user.controller');
 const { protected, adminOnly, authorOnly } = require('../middlewares/auth.middleware');
 const router = express.Router();
 
@@ -23,5 +24,6 @@ router.patch('/resetPassword/:resetToken', resetPassword);
 router.patch('/changePassword', protected, changePassword)
 
 router.post('/sendLoginCode/:email', sendLoginCode);
+router.post('/loginWithCode/:email', loginWithCode);
 
 module.exports = router;

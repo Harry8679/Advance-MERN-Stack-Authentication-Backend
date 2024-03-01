@@ -554,6 +554,11 @@ const forgotPassword = asyncHandler(async(req, res) => {
         }
     });
 
+    // Login With Code
+    const loginWithCode = asyncHandler(async(req, res) => {
+        res.send('Login With Code');
+    });
+
     // // Login With Code
     // const loginWithCode = asyncHandler(async (req, res) => {
     //     const { email } = req.params;
@@ -607,48 +612,7 @@ const forgotPassword = asyncHandler(async(req, res) => {
     //     }
     // });
 
-    // const sendLoginCode = asyncHandler(async(req, res) => {
-    //     const { email } = req.params;
-    //     const user = await User.findOne({ email });
-
-    //     if (!user) {
-    //         res.status(404);
-    //         throw new Error('User not found');
-    //     }
-
-    //     // Find Login Code in DB
-    //     let userToken = await Token.findOne({ 
-    //         userId: user._id,
-    //         expiresAt: {$gt : Date.now()}
-    //     });
-
-    //     if (!userToken) {
-    //         res.status(404);
-    //         throw new Error('Invalid or Expired token, please login again');
-    //     }
-
-    //     const loginCode = userToken.ltoken;
-    //     const decryptedLoginCode = cryptr.decrypt(loginCode);
-
-    //     // Send Login Code
-    //     const subject = 'Login Access Code - EMARH';
-    //     const send_to = user.email;
-    //     const sent_from = process.env.EMAIL_USER;
-    //     const reply_to = 'noreply@emarh-auth.fr';
-    //     const template = 'loginCode';
-    //     const name = user.name;
-    //     const link = decryptedLoginCode;
-
-    //     try {
-    //         await sendEmail(subject, send_to, sent_from, reply_to, template, name, link);
-    //         res.status(200).json({ message: `Access Code sent to ${email} !` });
-    //     } catch(error) {
-    //         res.status(500);
-    //         throw new Error('Email  was not sent, try again.');
-    //     }
-    // });
-
 module.exports = { 
     register, login, logout, getUser, update, deleteUser, getAllUsers, loginStatus, upgradeUser, sendAutomatedEmail, sendVerificationEmail, verifyUser, forgotPassword, 
-    resetPassword, changePassword, sendLoginCode
+    resetPassword, changePassword, sendLoginCode, loginWithCode
 };
