@@ -7,6 +7,9 @@ let parser = require('ua-parser-js');
 const jwt = require('jsonwebtoken');
 const Token = require('../models/token.model');
 const crypto = require('crypto');
+const Cryptr = require('cryptr');
+
+const cryptr = new Cryptr(process.env.CRYPTR_KEY);
 
 const register = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
